@@ -38,9 +38,10 @@ jobs:
     - name: Install Capacitor  
       run: |  
         npm install @capacitor/core @capacitor/cli @capacitor/android  
-          
-    - name: Initialize Capacitor  
-      run: npx cap init ezBookkeeping com.ezbookkeeping.app  
+      
+    - name: Create Capacitor config  
+      run: |  
+        echo '{"appId":"com.ezbookkeeping.app","appName":"ezBookkeeping","webDir":"dist","server":{"androidScheme":"https"}}' > capacitor.config.json  
         
     - name: Add Android platform  
       run: npx cap add android  
