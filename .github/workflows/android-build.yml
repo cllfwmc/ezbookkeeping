@@ -32,9 +32,9 @@ jobs:
       # 2. 安装并初始化 Capacitor
       - name: Install Capacitor CLI and plugins
         run: |
-          npm install @capacitor/core@latest @capacitor/cli@latest
-          npm install @capacitor/app@^6.0.0
-          npm install @capacitor/keyboard@^6.0.0
+          npm install @capacitor/core@6.2.1 @capacitor/cli@6.2.1
+          npm install @capacitor/android@6.2.1 @capacitor/ios@6.2.1 --save-dev
+          npm install @capacitor/app@6.0.2 @capacitor/keyboard@6.0.2
           npx cap init ezbookkeeping com.example.ezbookkeeping --web-dir=dist --npm-client=npm --no-interactive || true
 
       # 3. 构建前端
