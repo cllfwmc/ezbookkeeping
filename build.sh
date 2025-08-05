@@ -38,6 +38,7 @@ Types:
     frontend                Build frontend files
     package                 Build package archive
     docker                  Build docker image
+    capacitor-android       Build Android app with Capacitor  
 
 Options:
     -r, --release           Build release (The script will use environment variable "RELEASE_BUILD" to detect whether this is release building by default)
