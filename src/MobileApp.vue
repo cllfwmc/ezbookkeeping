@@ -28,6 +28,7 @@ import { initMapProvider } from '@/lib/map/index.ts';
 import { isUserLogined, isUserUnlocked } from '@/lib/userstate.ts';
 import { setExpenseAndIncomeAmountColor } from '@/lib/ui/common.ts';
 import { isModalShowing, setAppFontSize } from '@/lib/ui/mobile.ts';
+import { Capacitor } from '@capacitor/core';
 
 const { tt, getCurrentLanguageInfo, setLanguage, initLocale } = useI18n();
 
@@ -95,11 +96,14 @@ const f7params = ref<Framework7Parameters>({
     },
     view: {
         animate: isEnableAnimate(),
-        browserHistory: !isiOSHomeScreenMode(),
+        browserHistory: !isiOSHomeScreenMode() && !Capacitor.isNativePlatform(),
         browserHistoryInitialMatch: true,
         browserHistoryAnimate: false,
         iosSwipeBackAnimateShadow: false,
-        mdSwipeBackAnimateShadow: false
+        mdSwipeBackAnimateShadow: false,
+
+        // 添加原生应用手势配置  
+        swipeBackPage: Capacitor.isNativePlatform() ? false : true  
     }
 });
 
