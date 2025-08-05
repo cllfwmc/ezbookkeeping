@@ -1,4 +1,4 @@
-name: Build Mobile Apps with Capacitor
+name: Build Android APK
 
 on:
   push:
@@ -11,6 +11,7 @@ jobs:
   build-android:
     runs-on: ubuntu-latest
     steps:
+      # ---------- 基础环境 ----------
       - uses: actions/checkout@v4
 
       - name: Setup Node.js
@@ -25,11 +26,10 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      # 1. 安装依赖
+      # ---------- 依赖 & 平台 ----------
       - name: Install core dependencies
         run: npm install
 
-      # 2. 安装并初始化 Capacitor
       - name: Install Capacitor CLI and plugins
         run: |
           npm install @capacitor/core@6.2.1 @capacitor/cli@6.2.1
@@ -37,84 +37,47 @@ jobs:
           npm install @capacitor/app@6.0.2 @capacitor/keyboard@6.0.2
           npx cap init ezbookkeeping com.example.ezbookkeeping --web-dir=dist --npm-client=npm --no-interactive || true
 
-      # 3. 构建前端
       - name: Build web app
         run: npm run build
 
-      # 4. 添加 Android 平台（如已存在不会报错）
       - name: Add Android platform
         run: npx cap add android || true
 
-      - name: MANUALLY Replace Android Icons (100% Working)
+      # ---------- 替换图标 ----------
+      - name: Replace Android Icons
         run: |
-          # 1. 安装必要的工具
           sudo apt-get update && sudo apt-get install -y imagemagick
 
-          # 2. 检查源文件是否存在（关键调试步骤）
+          ICON_SRC="resources/ezbookkeeping-512.png"
           echo "检查源图标文件:"
-          ls -l public/img/ezbookkeeping-512.png
-          file public/img/ezbookkeeping-512.png
-          identify public/img/ezbookkeeping-512.png
+          ls -l "$ICON_SRC"
+          file "$ICON_SRC"
+          identify "$ICON_SRC"
 
-          # 3. 删除所有旧图标（防止缓存）
+          # 删除旧图标并创建目录
           rm -rf android/app/src/main/res/mipmap-*
-
-          # 4. 生成所有必需尺寸的图标（直接覆盖）
           mkdir -p android/app/src/main/res/mipmap-{mdpi,hdpi,xhdpi,xxhdpi,xxxhdpi}
 
-          # 方形图标
-          convert public/img/ezbookkeeping-512.png -resize 48x48   android/app/src/main/res/mipmap-mdpi/ic_launcher.png
-          convert public/img/ezbookkeeping-512.png -resize 72x72   android/app/src/main/res/mipmap-hdpi/ic_launcher.png
-          convert public/img/ezbookkeeping-512.png -resize 96x96   android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
-          convert public/img/ezbookkeeping-512.png -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-          convert public/img/ezbookkeeping-512.png -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          # 生成各尺寸图标
+          convert "$ICON_SRC" -resize 48x48   android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+          convert "$ICON_SRC" -resize 72x72   android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+          convert "$ICON_SRC" -resize 96x96   android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+          convert "$ICON_SRC" -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+          convert "$ICON_SRC" -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
 
-          # 5. 强制清理Gradle缓存
+          # 清理 Gradle 缓存
           cd android && ./gradlew clean && cd ..
 
-      - name: Verify Icons
-        run: |
-          # 检查生成的文件
-          echo "生成的图标文件列表:"
-          find android/app/src/main/res -name "ic_launcher*.png" | xargs ls -l
-
-          # 检查APK中的实际图标
-          unzip -p android/app/build/outputs/apk/debug/app-debug.apk res/mipmap-xxxhdpi-v4/ic_launcher.png > actual_icon.png
-          echo "APK中实际使用的图标:"
-          identify actual_icon.png
-          cmp -b public/img/ezbookkeeping-512.png actual_icon.png && echo "✅ 图标匹配" || echo "❌ 图标不匹配"
-
-      # 6. 同步资源
+      # ---------- 同步 & 构建 ----------
       - name: Sync Android
         run: npx cap sync android
 
-      # 7. 应用手势返回修复
-      # - name: Apply Gesture Fix
-      #   run: |
-      #     MAIN_ACTIVITY_PATH="android/app/src/main/java/$(echo com.example.ezbookkeeping | sed 's/\./\//g')/MainActivity.java"
-      #     if [ ! -f "$MAIN_ACTIVITY_PATH" ]; then
-      #       echo "⚠️ MainActivity.java not found at $MAIN_ACTIVITY_PATH"
-      #     else
-      #       sed -i '/public class MainActivity extends BridgeActivity {/a \    @Override\n    public void onBackPressed() {\n        if (this.bridge.getWebView().canGoBack()) {\n            this.bridge.getWebView().goBack();\n        } else {\n            super.onBackPressed();\n        }\n    }' $MAIN_ACTIVITY_PATH
-      #     fi
-      #     MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
-      #     if [ -f "$MANIFEST_PATH" ]; then
-      #       sed -i '/<activity/a \        <meta-data android:name="android.window.layoutInDisplayCutoutMode" android:value="shortEdges" />' $MANIFEST_PATH
-      #     fi
-
-      # 8. 清理构建缓存
-      - name: Clean Gradle Cache
-        run: |
-          cd android
-          ./gradlew clean
-
-      # 9. 构建 APK
       - name: Build Android APK
         run: |
           cd android
           ./gradlew assembleDebug
 
-      # 10. 上传 APK
+      # ---------- 上传产物 ----------
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
