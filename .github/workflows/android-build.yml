@@ -45,6 +45,18 @@ jobs:
       - name: Add Android platform
         run: npx cap add android || true
 
+      - name: Show current directory
+        run: pwd
+      
+      - name: List root files
+        run: ls -l
+      
+      - name: List public/img files
+        run: ls -l public/img
+      
+      - name: Show capacitor.assets.json
+        run: cat capacitor.assets.json
+        
       # 5. 生成并替换 App 图标
       - name: Generate App Icons
         run: |

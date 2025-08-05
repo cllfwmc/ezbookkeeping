@@ -1,5 +1,5 @@
 {
-  "icon": "./public/img/ezbookkeeping-512.png",
+  "icon": "public/img/ezbookkeeping-512.png",
   "android": {
     "iconBackgroundColor": "#FFFFFF"
   }
