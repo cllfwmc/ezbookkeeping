@@ -45,7 +45,8 @@ jobs:
       - name: Add Android platform
         run: npx cap add android || true
 
-      - name: Create correct capacitor.assets.json
+      # 1. 创建正确的资源配置文件
+      - name: Create capacitor.assets.json
         run: |
           echo '{
             "icon": "public/img/ezbookkeeping-512.png",
@@ -54,26 +55,19 @@ jobs:
             }
           }' > capacitor.assets.json
           
-      # 2. 生成应用图标（使用绝对路径）
-      - name: Generate App Icons
-        run: |
-          # 安装必要的依赖
-          npm install --save-dev @capacitor/assets
+      # 2. 安装最新版 assets 工具
+      - name: Install Capacitor Assets
+        run: npm install --save-dev @capacitor/assets@latest
           
-          # 使用绝对路径生成图标
-          npx capacitor-assets generate --android \
-            --icon "$(pwd)/public/img/ezbookkeeping-512.png" \
-            --iconBackground "$(pwd)/public/img/ezbookkeeping-512.png" \
-            --iconBackgroundColor '#FFFFFF'
-            
-      # 3. 验证生成的图标
+      # 3. 生成应用图标（使用默认行为）
+      - name: Generate App Icons
+        run: npx capacitor-assets generate --android
+        
+      # 4. 验证生成的图标
       - name: Verify generated icons
         run: |
           echo "检查生成的Android图标:"
           ls -lR android/app/src/main/res/mipmap-*
-          
-          echo "检查配置文件:"
-          cat capacitor.assets.json
 
       # 6. 同步资源
       - name: Sync Android
