@@ -1,94 +1,90 @@
-name: Build Mobile Apps with Capacitor  
-  
-on:  
-  push:  
-    branches: [ apk_dispatch ]  
-    tags: [ 'v*' ]  
-  pull_request:  
-    branches: [ apk_dispatch ]  
-  
-jobs:  
-  build-android:  
-    runs-on: ubuntu-latest  
-    steps:  
-      - uses: actions/checkout@v4  
-        
-      - name: Setup Node.js  
-        uses: actions/setup-node@v4  
-        with:  
-          node-version: '22'  
-          cache: 'npm'  
-        
-      - name: Setup Java  
-        uses: actions/setup-java@v4  
-        with:  
-          distribution: 'temurin'  
-          java-version: '21'  
-      
-      # 1. 先安装核心依赖
-      - name: Install core dependencies  
+name: Build Mobile Apps with Capacitor
+
+on:
+  push:
+    branches: [ apk_dispatch ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ apk_dispatch ]
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      # 1. 安装依赖
+      - name: Install core dependencies
         run: npm install
-        
-      # 2. 检查并更新Capacitor版本
-      - name: Update Capacitor versions  
-        run: |  
-          # 检查当前安装的Capacitor版本
-          npm list @capacitor/core
-          
-          # 更新到兼容版本
+
+      # 2. 安装并初始化 Capacitor
+      - name: Install Capacitor CLI and plugins
+        run: |
           npm install @capacitor/core@latest @capacitor/cli@latest
-          
-          # 安装兼容的app插件
           npm install @capacitor/app@^6.0.0
           npm install @capacitor/keyboard@^6.0.0
-        
-      - name: Build web app  
-        run: npm run build  
-        
-      - name: Add Android platform  
-        run: npx cap add android  
+          npx cap init ezbookkeeping com.example.ezbookkeeping --web-dir=dist --npm-client=npm --no-interactive || true
 
-      # - name: Generate App Icons  
-      #   run: |  
-      #     npm install @capacitor/assets --save-dev  
-      #     npx capacitor-assets generate --android
+      # 3. 构建前端
+      - name: Build web app
+        run: npm run build
 
-      - name: Sync Android  
-        run: npx cap sync android  
+      # 4. 添加 Android 平台（如已存在不会报错）
+      - name: Add Android platform
+        run: npx cap add android || true
 
-      # 4. 应用手势返回修复
-      - name: Apply Gesture Fix  
-        run: |  
-          # 创建或修改MainActivity.java
-          MAIN_ACTIVITY_PATH="android/app/src/main/java/$(echo ${{ secrets.APP_ID }} | sed 's/\./\//g')/MainActivity.java"
-          
+      # 5. 生成并替换 App 图标
+      - name: Generate App Icons
+        run: |
+          npm install --save-dev @capacitor/assets
+          npx capacitor-assets generate --android --iconPath=public/img/ezbookkeeping-512.png
+
+      # 6. 同步资源
+      - name: Sync Android
+        run: npx cap sync android
+
+      # 7. 应用手势返回修复
+      - name: Apply Gesture Fix
+        run: |
+          MAIN_ACTIVITY_PATH="android/app/src/main/java/$(echo com.example.ezbookkeeping | sed 's/\./\//g')/MainActivity.java"
           if [ ! -f "$MAIN_ACTIVITY_PATH" ]; then
             echo "⚠️ MainActivity.java not found at $MAIN_ACTIVITY_PATH"
           else
-            # 添加自定义返回逻辑
-            sed -i '/public class MainActivity extends BridgeActivity {/a \ \ \ \ @Override\n \ \ \ \ public void onBackPressed() {\n \ \ \ \ \ \ \ \ if (this.bridge.getWebView().canGoBack()) {\n \ \ \ \ \ \ \ \ \ \ \ \ this.bridge.getWebView().goBack();\n \ \ \ \ \ \ \ \ } else {\n \ \ \ \ \ \ \ \ \ \ \ \ super.onBackPressed();\n \ \ \ \ \ \ \ \ }\n \ \ \ \ }' $MAIN_ACTIVITY_PATH
+            sed -i '/public class MainActivity extends BridgeActivity {/a \    @Override\n    public void onBackPressed() {\n        if (this.bridge.getWebView().canGoBack()) {\n            this.bridge.getWebView().goBack();\n        } else {\n            super.onBackPressed();\n        }\n    }' $MAIN_ACTIVITY_PATH
           fi
-          
-          # 添加全屏手势支持
           MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
           if [ -f "$MANIFEST_PATH" ]; then
-            sed -i '/<activity/a \ \ \ \ \ \ \ \ <meta-data android:name="android.window.layoutInDisplayCutoutMode" android:value="shortEdges" />' $MANIFEST_PATH
+            sed -i '/<activity/a \        <meta-data android:name="android.window.layoutInDisplayCutoutMode" android:value="shortEdges" />' $MANIFEST_PATH
           fi
-        
-      # 5. 清理构建缓存
-      - name: Clean Gradle Cache  
-        run: |  
-          cd android  
-          ./gradlew clean   
 
-      - name: Build Android APK  
-        run: |  
-          cd android  
+      # 8. 清理构建缓存
+      - name: Clean Gradle Cache
+        run: |
+          cd android
+          ./gradlew clean
+
+      # 9. 构建 APK
+      - name: Build Android APK
+        run: |
+          cd android
           ./gradlew assembleDebug
 
-      - name: Upload APK artifact  
-        uses: actions/upload-artifact@v4  
-        with:  
-          name: app-debug  
-          path: android/app/build/outputs/apk/debug/app-debug.apk  
-          retention-days: 1  
+      # 10. 上传 APK
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 1

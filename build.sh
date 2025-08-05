@@ -37,7 +37,6 @@ Types:
     backend                 Build backend binary file
     frontend                Build frontend files
     package                 Build package archive
-    docker                  Build docker image
     capacitor-android       Build Android app with Capacitor  
 
 Options:
