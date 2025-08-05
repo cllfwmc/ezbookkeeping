@@ -1,0 +1,20 @@
+--- android/app/src/main/java/com/example/ezbookkeeping/MainActivity.java
++++ android/app/src/main/java/com/example/ezbookkeeping/MainActivity.java
+@@ -1,10 +1,18 @@
+ package com.example.ezbookkeeping;
+ 
+ import android.os.Bundle;
++import android.webkit.WebView;
+ import com.getcapacitor.BridgeActivity;
+ import com.getcapacitor.Plugin;
+ import java.util.ArrayList;
+ 
+ public class MainActivity extends BridgeActivity {
++  @Override
++  protected void onCreate(Bundle savedInstanceState) {
++    super.onCreate(savedInstanceState);
++    getBridge().getWebView().setOverScrollMode(WebView.OVER_SCROLL_NEVER);
++    getBridge().getWebView().getSettings().setBuiltInZoomControls(false);
++    getBridge().getWebView().getSettings().setDisplayZoomControls(false);
++  }
+ }
