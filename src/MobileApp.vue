@@ -96,14 +96,11 @@ const f7params = ref<Framework7Parameters>({
     },
     view: {
         animate: isEnableAnimate(),
-        browserHistory: !isiOSHomeScreenMode() && !Capacitor.isNativePlatform(),
+        browserHistory: !isiOSHomeScreenMode(),
         browserHistoryInitialMatch: true,
         browserHistoryAnimate: false,
         iosSwipeBackAnimateShadow: false,
-        mdSwipeBackAnimateShadow: false,
-
-        // 添加原生应用手势配置  
-        swipeBackPage: Capacitor.isNativePlatform() ? false : true  
+        mdSwipeBackAnimateShadow: false 
     }
 });
 
