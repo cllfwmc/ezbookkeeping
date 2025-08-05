@@ -8,7 +8,10 @@ const config: CapacitorConfig = {
     // 指向您的Docker服务地址  
     url: 'http://47.110.45.32:5457/',  
     cleartext: true  
-  }  
+  },
+  android: {  
+    iconPath: 'public/img/ezbookkeeping-512.png'  
+  }    
 };  
   
 export default config;
