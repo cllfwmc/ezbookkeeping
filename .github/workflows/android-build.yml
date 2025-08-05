@@ -56,18 +56,18 @@ jobs:
         run: npx cap sync android
 
       # 7. 应用手势返回修复
-      - name: Apply Gesture Fix
-        run: |
-          MAIN_ACTIVITY_PATH="android/app/src/main/java/$(echo com.example.ezbookkeeping | sed 's/\./\//g')/MainActivity.java"
-          if [ ! -f "$MAIN_ACTIVITY_PATH" ]; then
-            echo "⚠️ MainActivity.java not found at $MAIN_ACTIVITY_PATH"
-          else
-            sed -i '/public class MainActivity extends BridgeActivity {/a \    @Override\n    public void onBackPressed() {\n        if (this.bridge.getWebView().canGoBack()) {\n            this.bridge.getWebView().goBack();\n        } else {\n            super.onBackPressed();\n        }\n    }' $MAIN_ACTIVITY_PATH
-          fi
-          MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
-          if [ -f "$MANIFEST_PATH" ]; then
-            sed -i '/<activity/a \        <meta-data android:name="android.window.layoutInDisplayCutoutMode" android:value="shortEdges" />' $MANIFEST_PATH
-          fi
+      # - name: Apply Gesture Fix
+      #   run: |
+      #     MAIN_ACTIVITY_PATH="android/app/src/main/java/$(echo com.example.ezbookkeeping | sed 's/\./\//g')/MainActivity.java"
+      #     if [ ! -f "$MAIN_ACTIVITY_PATH" ]; then
+      #       echo "⚠️ MainActivity.java not found at $MAIN_ACTIVITY_PATH"
+      #     else
+      #       sed -i '/public class MainActivity extends BridgeActivity {/a \    @Override\n    public void onBackPressed() {\n        if (this.bridge.getWebView().canGoBack()) {\n            this.bridge.getWebView().goBack();\n        } else {\n            super.onBackPressed();\n        }\n    }' $MAIN_ACTIVITY_PATH
+      #     fi
+      #     MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
+      #     if [ -f "$MANIFEST_PATH" ]; then
+      #       sed -i '/<activity/a \        <meta-data android:name="android.window.layoutInDisplayCutoutMode" android:value="shortEdges" />' $MANIFEST_PATH
+      #     fi
 
       # 8. 清理构建缓存
       - name: Clean Gradle Cache
