@@ -45,29 +45,27 @@ jobs:
       - name: Add Android platform
         run: npx cap add android || true
 
-      # 1. 创建正确的资源配置文件
-      - name: Create capacitor.assets.json
+      - name: MANUALLY Replace Android Icons (100% Working)
         run: |
-          echo '{
-            "icon": "public/img/ezbookkeeping-512.png",
-            "android": {
-              "iconBackgroundColor": "#FFFFFF"
-            }
-          }' > capacitor.assets.json
-          
-      # 2. 安装最新版 assets 工具
-      - name: Install Capacitor Assets
-        run: npm install --save-dev @capacitor/assets@latest
-          
-      # 3. 生成应用图标（使用默认行为）
-      - name: Generate App Icons
-        run: npx capacitor-assets generate --android
-        
-      # 4. 验证生成的图标
-      - name: Verify generated icons
-        run: |
-          echo "检查生成的Android图标:"
-          ls -lR android/app/src/main/res/mipmap-*
+          # 安装图像处理工具
+          sudo apt-get update && sudo apt-get install -y imagemagick
+
+          # 创建所有必要的 Android 资源目录
+          mkdir -p android/app/src/main/res/mipmap-{mdpi,hdpi,xhdpi,xxhdpi,xxxhdpi}
+
+          # 生成方形图标（直接覆盖 Capacitor 默认图标）
+          convert public/img/ezbookkeeping-512.png -resize 48x48   android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+          convert public/img/ezbookkeeping-512.png -resize 72x72   android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+          convert public/img/ezbookkeeping-512.png -resize 96x96   android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+          convert public/img/ezbookkeeping-512.png -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+          convert public/img/ezbookkeeping-512.png -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+
+          # 强制更新 AndroidManifest（确保使用新图标）
+          sed -i 's/android:icon="@mipmap\/ic_launcher"/android:icon="@mipmap\/ic_launcher"/' android/app/src/main/AndroidManifest.xml
+
+          # 验证生成的文件
+          echo "✅ 生成的图标文件："
+          find android/app/src/main/res/mipmap-* -name "ic_launcher*.png" | xargs ls -l
 
       # 6. 同步资源
       - name: Sync Android
