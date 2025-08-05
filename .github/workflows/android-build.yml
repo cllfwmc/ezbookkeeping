@@ -24,7 +24,13 @@ jobs:
         with:  
           distribution: 'temurin'  
           java-version: '21'  
-        
+      
+      - name: Install Capacitor plugins  
+        run: |  
+          npm install @capacitor/app  
+          npm install @capacitor/geolocation  
+          npm install @capacitor/keyboard  
+
       - name: Install dependencies  
         run: npm install  
         
@@ -34,14 +40,30 @@ jobs:
       - name: Add Android platform  
         run: npx cap add android  
 
-      - name: Generate App Icons  
-        run: |  
-          npm install @capacitor/assets --save-dev  
-          npx capacitor-assets generate --android
+      # - name: Generate App Icons  
+      #   run: |  
+      #     npm install @capacitor/assets --save-dev  
+      #     npx capacitor-assets generate --android
 
       - name: Sync Android  
         run: npx cap sync android  
+
+      # 应用手势返回修复
+      - name: Apply Gesture Fix  
+        run: |  
+          # 添加手势插件到 MainActivity
+          sed -i '/public class MainActivity extends BridgeActivity {/a \ \ \ \ @Override\n \ \ \ \ protected void onCreate(Bundle savedInstanceState) {\n \ \ \ \ \ \ \ \ super.onCreate(savedInstanceState);\n \ \ \ \ \ \ \ \ registerPlugin(com.getcapacitor.community.rtl.Rtl.class);\n \ \ \ \ }' android/app/src/main/java/com/example/app/MainActivity.java
+          
+          # 启用全屏手势导航
+          sed -i '/<activity/a \ \ \ \ \ \ \ \ <meta-data android:name="android.max_aspect" android:value="2.1" />' android/app/src/main/AndroidManifest.xml
+          sed -i '/<activity/a \ \ \ \ \ \ \ \ <meta-data android:name="android.window.layoutInDisplayCutoutMode" android:value="shortEdges" />' android/app/src/main/AndroidManifest.xml
         
+      # 清理Gradle缓存
+      - name: Clean Gradle Cache  
+        run: |  
+          cd android  
+          ./gradlew clean  
+
       - name: Build Android APK  
         run: |  
           cd android  
