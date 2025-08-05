@@ -49,7 +49,7 @@ jobs:
       - name: Generate App Icons
         run: |
           npm install --save-dev @capacitor/assets
-          npx capacitor-assets generate --android --iconPath=public/img/ezbookkeeping-512.png
+          npx capacitor-assets generate --android
 
       # 6. 同步资源
       - name: Sync Android
