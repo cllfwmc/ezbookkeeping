@@ -25,14 +25,22 @@ jobs:
           distribution: 'temurin'  
           java-version: '21'  
       
-      - name: Install Capacitor plugins  
+      # 1. 先安装核心依赖
+      - name: Install core dependencies  
+        run: npm install
+        
+      # 2. 检查并更新Capacitor版本
+      - name: Update Capacitor versions  
         run: |  
-          npm install @capacitor/app  
-          npm install @capacitor/geolocation  
-          npm install @capacitor/keyboard  
-
-      - name: Install dependencies  
-        run: npm install  
+          # 检查当前安装的Capacitor版本
+          npm list @capacitor/core
+          
+          # 更新到兼容版本
+          npm install @capacitor/core@latest @capacitor/cli@latest
+          
+          # 安装兼容的app插件
+          npm install @capacitor/app@^6.0.0
+          npm install @capacitor/keyboard@^6.0.0
         
       - name: Build web app  
         run: npm run build  
@@ -48,21 +56,30 @@ jobs:
       - name: Sync Android  
         run: npx cap sync android  
 
-      # 应用手势返回修复
+      # 4. 应用手势返回修复
       - name: Apply Gesture Fix  
         run: |  
-          # 添加手势插件到 MainActivity
-          sed -i '/public class MainActivity extends BridgeActivity {/a \ \ \ \ @Override\n \ \ \ \ protected void onCreate(Bundle savedInstanceState) {\n \ \ \ \ \ \ \ \ super.onCreate(savedInstanceState);\n \ \ \ \ \ \ \ \ registerPlugin(com.getcapacitor.community.rtl.Rtl.class);\n \ \ \ \ }' android/app/src/main/java/com/example/app/MainActivity.java
+          # 创建或修改MainActivity.java
+          MAIN_ACTIVITY_PATH="android/app/src/main/java/$(echo ${{ secrets.APP_ID }} | sed 's/\./\//g')/MainActivity.java"
           
-          # 启用全屏手势导航
-          sed -i '/<activity/a \ \ \ \ \ \ \ \ <meta-data android:name="android.max_aspect" android:value="2.1" />' android/app/src/main/AndroidManifest.xml
-          sed -i '/<activity/a \ \ \ \ \ \ \ \ <meta-data android:name="android.window.layoutInDisplayCutoutMode" android:value="shortEdges" />' android/app/src/main/AndroidManifest.xml
+          if [ ! -f "$MAIN_ACTIVITY_PATH" ]; then
+            echo "⚠️ MainActivity.java not found at $MAIN_ACTIVITY_PATH"
+          else
+            # 添加自定义返回逻辑
+            sed -i '/public class MainActivity extends BridgeActivity {/a \ \ \ \ @Override\n \ \ \ \ public void onBackPressed() {\n \ \ \ \ \ \ \ \ if (this.bridge.getWebView().canGoBack()) {\n \ \ \ \ \ \ \ \ \ \ \ \ this.bridge.getWebView().goBack();\n \ \ \ \ \ \ \ \ } else {\n \ \ \ \ \ \ \ \ \ \ \ \ super.onBackPressed();\n \ \ \ \ \ \ \ \ }\n \ \ \ \ }' $MAIN_ACTIVITY_PATH
+          fi
+          
+          # 添加全屏手势支持
+          MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
+          if [ -f "$MANIFEST_PATH" ]; then
+            sed -i '/<activity/a \ \ \ \ \ \ \ \ <meta-data android:name="android.window.layoutInDisplayCutoutMode" android:value="shortEdges" />' $MANIFEST_PATH
+          fi
         
-      # 清理Gradle缓存
+      # 5. 清理构建缓存
       - name: Clean Gradle Cache  
         run: |  
           cd android  
-          ./gradlew clean  
+          ./gradlew clean   
 
       - name: Build Android APK  
         run: |  
