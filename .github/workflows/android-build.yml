@@ -47,25 +47,42 @@ jobs:
 
       - name: MANUALLY Replace Android Icons (100% Working)
         run: |
-          # 安装图像处理工具
+          # 1. 安装必要的工具
           sudo apt-get update && sudo apt-get install -y imagemagick
 
-          # 创建所有必要的 Android 资源目录
+          # 2. 检查源文件是否存在（关键调试步骤）
+          echo "检查源图标文件:"
+          ls -l public/img/ezbookkeeping-512.png
+          file public/img/ezbookkeeping-512.png
+          identify public/img/ezbookkeeping-512.png
+
+          # 3. 删除所有旧图标（防止缓存）
+          rm -rf android/app/src/main/res/mipmap-*
+
+          # 4. 生成所有必需尺寸的图标（直接覆盖）
           mkdir -p android/app/src/main/res/mipmap-{mdpi,hdpi,xhdpi,xxhdpi,xxxhdpi}
 
-          # 生成方形图标（直接覆盖 Capacitor 默认图标）
+          # 方形图标
           convert public/img/ezbookkeeping-512.png -resize 48x48   android/app/src/main/res/mipmap-mdpi/ic_launcher.png
           convert public/img/ezbookkeeping-512.png -resize 72x72   android/app/src/main/res/mipmap-hdpi/ic_launcher.png
           convert public/img/ezbookkeeping-512.png -resize 96x96   android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
           convert public/img/ezbookkeeping-512.png -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
           convert public/img/ezbookkeeping-512.png -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
 
-          # 强制更新 AndroidManifest（确保使用新图标）
-          sed -i 's/android:icon="@mipmap\/ic_launcher"/android:icon="@mipmap\/ic_launcher"/' android/app/src/main/AndroidManifest.xml
+          # 5. 强制清理Gradle缓存
+          cd android && ./gradlew clean && cd ..
 
-          # 验证生成的文件
-          echo "✅ 生成的图标文件："
-          find android/app/src/main/res/mipmap-* -name "ic_launcher*.png" | xargs ls -l
+      - name: Verify Icons
+        run: |
+          # 检查生成的文件
+          echo "生成的图标文件列表:"
+          find android/app/src/main/res -name "ic_launcher*.png" | xargs ls -l
+
+          # 检查APK中的实际图标
+          unzip -p android/app/build/outputs/apk/debug/app-debug.apk res/mipmap-xxxhdpi-v4/ic_launcher.png > actual_icon.png
+          echo "APK中实际使用的图标:"
+          identify actual_icon.png
+          cmp -b public/img/ezbookkeeping-512.png actual_icon.png && echo "✅ 图标匹配" || echo "❌ 图标不匹配"
 
       # 6. 同步资源
       - name: Sync Android
