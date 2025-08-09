@@ -136,15 +136,15 @@ jobs:
           sed -i 's/android:theme="@style\/AppTheme\.NoActionBarLaunch"/android:theme="@style\/LaunchTheme"/' android/app/src/main/AndroidManifest.xml
 
 
-        - name: Build Android APK
-          run: |
-            cd android
-            ./gradlew assembleDebug
-            
-        # ---------- 上传产物 ----------
-        - name: Upload APK artifact
-          uses: actions/upload-artifact@v4
-          with:
-            name: app-debug
-            path: android/app/build/outputs/apk/debug/app-debug.apk
-            retention-days: 1
+      - name: Build Android APK
+        run: |
+          cd android
+          ./gradlew assembleDebug
+          
+      # ---------- 上传产物 ----------
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 1
