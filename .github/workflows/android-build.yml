@@ -1,8 +1,76 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ apk_dispatch ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ apk_dispatch ]
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      # ---------- 基础环境 ----------
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      # ---------- 依赖 & 平台 ----------
+      - name: Install core dependencies
+        run: npm install
+
+      - name: Install Capacitor CLI and plugins
+        run: |
+          npm install @capacitor/core@6.2.1 @capacitor/cli@6.2.1
+          npm install @capacitor/android@6.2.1 @capacitor/ios@6.2.1 --save-dev
+          npm install @capacitor/app@6.0.2 @capacitor/keyboard@6.0.2
+          npx cap init ezbookkeeping com.example.ezbookkeeping --web-dir=dist --npm-client=npm --no-interactive || true
+
+      - name: Build web app
+        run: npm run build
+
+      - name: Add Android platform
+        run: npx cap add android || true
+
       # ---------- 替换图标 ----------
-      # （这里是你已有的步骤，保持不变）
       - name: Replace Android Icons
         run: |
-          …
+          sudo apt-get update && sudo apt-get install -y imagemagick
+
+          ICON_SRC="resources/ezbookkeeping-512.png"
+          echo "检查源图标文件:"
+          ls -l "$ICON_SRC"
+          file "$ICON_SRC"
+          identify "$ICON_SRC"
+
+          rm -rf android/app/src/main/res/mipmap-*
+          mkdir -p android/app/src/main/res/mipmap-{mdpi,hdpi,xhdpi,xxhdpi,xxxhdpi}
+
+          # 普通图标
+          convert "$ICON_SRC" -resize 48x48   android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+          convert "$ICON_SRC" -resize 72x72   android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+          convert "$ICON_SRC" -resize 96x96   android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+          convert "$ICON_SRC" -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+          convert "$ICON_SRC" -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+
+          # 圆形图标（ic_launcher_round）
+          convert "$ICON_SRC" -resize 48x48   android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
+          convert "$ICON_SRC" -resize 72x72   android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
+          convert "$ICON_SRC" -resize 96x96   android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
+          convert "$ICON_SRC" -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
+          convert "$ICON_SRC" -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
+
           # 清理 Gradle 缓存
           cd android && ./gradlew clean && cd ..
 
@@ -27,7 +95,7 @@
           # 生成 launch_background.xml
           cat > android/app/src/main/res/drawable/launch_background.xml <<'EOF'
           <?xml version="1.0" encoding="utf-8"?>
-          <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+          <layer-list xmlns:android="http://schemas.android.com/apk/res/android ">
               <item android:drawable="@android:color/white"/>
               <item>
                   <bitmap
