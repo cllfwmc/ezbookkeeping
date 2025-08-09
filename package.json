@@ -82,7 +82,8 @@
     "@capacitor/android": "6.2.1",
     "@capacitor/ios": "6.2.1",
     "@capacitor/app": "6.0.2",
-    "@capacitor/keyboard": "6.0.2"
+    "@capacitor/keyboard": "6.0.2",
+    "@capacitor/splash-screen": "6.0.2"
   },
   "browserslist": [
     "> 1%",
