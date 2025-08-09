@@ -80,71 +80,71 @@ jobs:
 
 
       # ---------- 增加 splash screen ----------
-    - name: Add Splash Screen
-      run: |
-        sudo apt-get update && sudo apt-get install -y imagemagick
-    
-        # 创建 drawable 目录
-        mkdir -p android/app/src/main/res/drawable-mdpi
-        mkdir -p android/app/src/main/res/drawable-hdpi
-        mkdir -p android/app/src/main/res/drawable-xhdpi
-        mkdir -p android/app/src/main/res/drawable-xxhdpi
-        mkdir -p android/app/src/main/res/drawable-xxxhdpi
-    
-        # 正确分配不同分辨率到不同目录（避免重复覆盖）
-        convert resources/splash_720x1280.png   android/app/src/main/res/drawable-mdpi/splash.png
-        convert resources/splash_1080x1920.png android/app/src/main/res/drawable-hdpi/splash.png
-        convert resources/splash_1080x2400.png android/app/src/main/res/drawable-xhdpi/splash.png
-        convert resources/splash_1440x2560.png android/app/src/main/res/drawable-xxhdpi/splash.png
-        convert resources/splash_1440x3120.png android/app/src/main/res/drawable-xxxhdpi/splash.png
-    
-        # 生成 launch_background.xml
-        mkdir -p android/app/src/main/res/drawable
-        cat > android/app/src/main/res/drawable/launch_background.xml <<'EOF'
-        <?xml version="1.0" encoding="utf-8"?>
-        <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-            <item>
-                <shape android:shape="rectangle">
-                    <solid android:color="@android:color/white" />
-                </shape>
-            </item>
-            <item>
-                <bitmap
-                    android:gravity="center"
-                    android:src="@drawable/splash" />
-            </item>
-        </layer-list>
-        EOF
-    
-        # 创建 styles.xml
-        cat > android/app/src/main/res/values/styles.xml <<'EOF'
-        <resources>
-            <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
-                <item name="colorPrimary">@color/colorPrimary</item>
-                <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
-                <item name="colorAccent">@color/colorAccent</item>
-            </style>
-    
-            <style name="LaunchTheme" parent="Theme.AppCompat.Light.NoActionBar">
-                <item name="android:windowBackground">@drawable/launch_background</item>
-                <item name="android:windowFullscreen">true</item>
-            </style>
-        </resources>
-        EOF
-    
-        # 修改 AndroidManifest.xml 中的 theme
-        sed -i 's/android:theme="@style\/AppTheme\.NoActionBarLaunch"/android:theme="@style\/LaunchTheme"/' android/app/src/main/AndroidManifest.xml
-
-
-      - name: Build Android APK
+      - name: Add Splash Screen
         run: |
-          cd android
-          ./gradlew assembleDebug
-          
-      # ---------- 上传产物 ----------
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-debug
-          path: android/app/build/outputs/apk/debug/app-debug.apk
-          retention-days: 1
+          sudo apt-get update && sudo apt-get install -y imagemagick
+
+          # 创建 drawable 目录
+          mkdir -p android/app/src/main/res/drawable-mdpi
+          mkdir -p android/app/src/main/res/drawable-hdpi
+          mkdir -p android/app/src/main/res/drawable-xhdpi
+          mkdir -p android/app/src/main/res/drawable-xxhdpi
+          mkdir -p android/app/src/main/res/drawable-xxxhdpi
+
+          # 正确分配不同分辨率到不同目录（避免重复覆盖）
+          convert resources/splash_720x1280.png   android/app/src/main/res/drawable-mdpi/splash.png
+          convert resources/splash_1080x1920.png android/app/src/main/res/drawable-hdpi/splash.png
+          convert resources/splash_1080x2400.png android/app/src/main/res/drawable-xhdpi/splash.png
+          convert resources/splash_1440x2560.png android/app/src/main/res/drawable-xxhdpi/splash.png
+          convert resources/splash_1440x3120.png android/app/src/main/res/drawable-xxxhdpi/splash.png
+
+          # 生成 launch_background.xml
+          mkdir -p android/app/src/main/res/drawable
+          cat > android/app/src/main/res/drawable/launch_background.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+              <item>
+                  <shape android:shape="rectangle">
+                      <solid android:color="@android:color/white" />
+                  </shape>
+              </item>
+              <item>
+                  <bitmap
+                      android:gravity="center"
+                      android:src="@drawable/splash" />
+              </item>
+          </layer-list>
+          EOF
+
+          # 创建 styles.xml
+          cat > android/app/src/main/res/values/styles.xml <<'EOF'
+          <resources>
+              <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+                  <item name="colorPrimary">@color/colorPrimary</item>
+                  <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+                  <item name="colorAccent">@color/colorAccent</item>
+              </style>
+
+              <style name="LaunchTheme" parent="Theme.AppCompat.Light.NoActionBar">
+                  <item name="android:windowBackground">@drawable/launch_background</item>
+                  <item name="android:windowFullscreen">true</item>
+              </style>
+          </resources>
+          EOF
+
+          # 修改 AndroidManifest.xml 中的 theme
+          sed -i 's/android:theme="@style\/AppTheme\.NoActionBarLaunch"/android:theme="@style\/LaunchTheme"/' android/app/src/main/AndroidManifest.xml
+
+
+        - name: Build Android APK
+          run: |
+            cd android
+            ./gradlew assembleDebug
+            
+        # ---------- 上传产物 ----------
+        - name: Upload APK artifact
+          uses: actions/upload-artifact@v4
+          with:
+            name: app-debug
+            path: android/app/build/outputs/apk/debug/app-debug.apk
+            retention-days: 1
