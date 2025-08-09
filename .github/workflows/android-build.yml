@@ -78,11 +78,7 @@ jobs:
       - name: Sync Android
         run: npx cap sync android
 
-      - name: Build Android APK
-        run: |
-          cd android
-          ./gradlew assembleDebug
-          
+
       # ---------- 增加 splash screen ----------
       - name: Add Splash Screen
         run: |
@@ -141,6 +137,11 @@ jobs:
           sed -i 's/android:theme="@style\/AppTheme\.NoActionBarLaunch"/android:theme="@style\/LaunchTheme"/' android/app/src/main/AndroidManifest.xml
 
 
+      - name: Build Android APK
+        run: |
+          cd android
+          ./gradlew assembleDebug
+          
       # ---------- 上传产物 ----------
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
