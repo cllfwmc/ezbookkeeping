@@ -74,6 +74,15 @@ jobs:
           # 清理 Gradle 缓存
           cd android && ./gradlew clean && cd ..
 
+      # ---------- 同步 & 构建 ----------
+      - name: Sync Android
+        run: npx cap sync android
+
+      - name: Build Android APK
+        run: |
+          cd android
+          ./gradlew assembleDebug
+          
       # ---------- 增加 splash screen ----------
       - name: Add Splash Screen
         run: |
@@ -131,14 +140,6 @@ jobs:
           # 在 AndroidManifest.xml 的启动 Activity 里把 theme 换成 LaunchTheme
           sed -i 's/android:theme="@style\/AppTheme\.NoActionBarLaunch"/android:theme="@style\/LaunchTheme"/' android/app/src/main/AndroidManifest.xml
 
-      # ---------- 同步 & 构建 ----------
-      - name: Sync Android
-        run: npx cap sync android
-
-      - name: Build Android APK
-        run: |
-          cd android
-          ./gradlew assembleDebug
 
       # ---------- 上传产物 ----------
       - name: Upload APK artifact
