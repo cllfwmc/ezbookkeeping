@@ -124,7 +124,7 @@ jobs:
           EOF
 
           # 在 AndroidManifest.xml 的启动 <activity> 里把 theme 换成 LaunchTheme
-          sed -i 's/android:theme="@style\/AppTheme"/android:theme="@style\/LaunchTheme"/' android/app/src/main/AndroidManifest.xml
+          sed -i 's/android:theme="@style\/AppTheme\.NoActionBarLaunch"/android:theme="@style\/LaunchTheme"/' android/app/src/main/AndroidManifest.xml
 
       # ---------- 同步 & 构建 ----------
       - name: Sync Android
