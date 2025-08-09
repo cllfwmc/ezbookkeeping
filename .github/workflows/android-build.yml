@@ -90,17 +90,22 @@ jobs:
           convert resources/splash_1080x2400.png android/app/src/main/res/drawable-xhdpi/splash.png
           convert resources/splash_1440x2560.png android/app/src/main/res/drawable-xhdpi/splash.png
           convert resources/splash_1440x3040.png android/app/src/main/res/drawable-xxhdpi/splash.png
-          convert resources/splash_1440x3120.png android/app/src/main/res/drawable-xhdpi/splash.png
+          convert resources/splash_1440x3120.png android/app/src/main/res/drawable-xxhdpi/splash.png
 
-          # 生成 launch_background.xml
+          # 生成 launch_background.xml（修正命名空间）
+          mkdir -p android/app/src/main/res/drawable
           cat > android/app/src/main/res/drawable/launch_background.xml <<'EOF'
           <?xml version="1.0" encoding="utf-8"?>
-          <layer-list xmlns:android="http://schemas.android.com/apk/res/android ">
-              <item android:drawable="@android:color/white"/>
+          <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+              <item>
+                  <shape android:shape="rectangle">
+                      <solid android:color="@android:color/white" />
+                  </shape>
+              </item>
               <item>
                   <bitmap
                       android:gravity="center"
-                      android:src="@drawable/splash"/>
+                      android:src="@drawable/splash" />
               </item>
           </layer-list>
           EOF
@@ -123,7 +128,7 @@ jobs:
           </resources>
           EOF
 
-          # 在 AndroidManifest.xml 的启动 <activity> 里把 theme 换成 LaunchTheme
+          # 在 AndroidManifest.xml 的启动 Activity 里把 theme 换成 LaunchTheme
           sed -i 's/android:theme="@style\/AppTheme\.NoActionBarLaunch"/android:theme="@style\/LaunchTheme"/' android/app/src/main/AndroidManifest.xml
 
       # ---------- 同步 & 构建 ----------
