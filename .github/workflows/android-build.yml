@@ -151,15 +151,62 @@ jobs:
           # 清理 Gradle 缓存
           cd android && ./gradlew clean && cd ..
 
+      # ---------- 签名配置 ----------
+      - name: Decode Keystore
+        run: echo "${{ secrets.KEY_STORE_BASE64 }}" | base64 -d > resources/upload-keystore.jks
+      - name: Create key.properties
+        working-directory: android
+        run: |
+          echo "storePassword=${{ secrets.KEY_STORE_PASSWORD }}" > key.properties
+          echo "keyPassword=${{ secrets.KEY_PASSWORD }}"      >> key.properties
+          echo "keyAlias=${{ secrets.KEY_ALIAS }}"            >> key.properties
+          echo "storeFile=../resources/upload-keystore.jks"   >> key.properties
+
+
       - name: Build Android APK
         run: |
           cd android
-          ./gradlew assembleDebug
+          # 使用 debug 构建
+          # ./gradlew assembleDebug
+          # 使用 release 构建
+          ./gradlew assembleRelease --no-daemon
           
       # ---------- 上传产物 ----------
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
+        if: "!startsWith(github.ref, 'refs/tags/v')"
         with:
-          name: app-debug
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: app-apks
+          path: |
+            android/app/build/outputs/apk/debug/app-debug.apk
+            android/app/build/outputs/apk/release/app-release.apk
           retention-days: 1
+
+      # ---------- 创建 GitHub Release ----------
+      - name: Create Release
+        id: create_release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: Release ${{ github.ref_name }}
+          body: |
+            ## 📦 发布说明
+            - 基于 commit ${{ github.sha }}
+            - 已签名 Release APK
+          draft: false
+          prerelease: false
+
+      # ---------- 上传 Release APK ----------
+      - name: Upload Release APK
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: android/app/build/outputs/apk/release/app-release.apk
+          asset_name: ezbookkeeping-${{ github.ref_name }}.apk
+          asset_content_type: application/vnd.android.package-archive
