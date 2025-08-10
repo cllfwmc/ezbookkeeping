@@ -107,8 +107,7 @@ jobs:
           convert resources/splash_1440x2560.png android/app/src/main/res/drawable-xxhdpi/splash.png
           convert resources/splash_1440x3120.png android/app/src/main/res/drawable-xxxhdpi/splash.png
 
-          # 生成 launch_background.xml
-          mkdir -p android/app/src/main/res/drawable
+          # ---------- 生成 launch_background.xml ----------
           cat > android/app/src/main/res/drawable/launch_background.xml <<'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
@@ -117,13 +116,25 @@ jobs:
                       <solid android:color="@android:color/white" />
                   </shape>
               </item>
-              <item>
-                  <bitmap
-                      android:gravity="center"
-                      android:src="@drawable/splash" />
-              </item>
+              <!-- 直接引用一个 selector/wrapper，不再用 bitmap 标签 -->
+              <item android:drawable="@drawable/splash" android:gravity="center" />
           </layer-list>
           EOF
+          
+          # ---------- 生成 splash.xml（wrapper，让系统按密度去找） ----------
+          cat > android/app/src/main/res/drawable/splash.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <bitmap xmlns:android="http://schemas.android.com/apk/res/android"
+              android:src="@drawable/splash_png"
+              android:gravity="center" />
+          EOF
+          
+          # ---------- 把真正的 png 改名成 splash_png.png ----------
+          # 这样 @drawable/splash_png 就会去对应密度的目录找
+          for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+            mv android/app/src/main/res/drawable-${density}/splash.png \
+               android/app/src/main/res/drawable-${density}/splash_png.png 2>/dev/null || true
+          done
 
           # 创建 styles.xml
           cat > android/app/src/main/res/values/styles.xml <<'EOF'
