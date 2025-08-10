@@ -171,23 +171,31 @@ jobs:
           # 使用 release 构建
           ./gradlew assembleRelease --no-daemon
           
+      # ---------- 确认实际输出路径 ----------
+      - name: Locate APK
+        id: apk
+        run: |
+          # 找到真正的 APK
+          APK_PATH=$(find android -path '*/build/outputs/apk/*' -name '*.apk' | head -n1)
+          echo "APK_PATH=$APK_PATH" >> "$GITHUB_OUTPUT"
+          echo "Found APK at: $APK_PATH"
+          ls -l "$APK_PATH"
+      
       # ---------- 上传产物 ----------
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
-        #if: "!startsWith(github.ref, 'refs/tags/v')"
         with:
           name: app-apks
-          path:
-            android/app/build/outputs/apk/release/app-release.apk
+          path: ${{ steps.apk.outputs.APK_PATH }}
           retention-days: 1
-
-      # ---------- 创建 GitHub Release ----------
+      
+      # ---------- 创建 Release ----------
       - name: Create Release
         id: create_release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }} 
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         with:
           tag_name: ${{ github.ref_name }}
           release_name: Release ${{ github.ref_name }}
@@ -197,7 +205,7 @@ jobs:
             - 已签名 Release APK
           draft: false
           prerelease: false
-
+      
       # ---------- 上传 Release APK ----------
       - name: Upload Release APK
         if: startsWith(github.ref, 'refs/tags/v')
@@ -206,6 +214,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: android/app/build/outputs/apk/release/app-release.apk
+          asset_path: ${{ steps.apk.outputs.APK_PATH }}
           asset_name: ezbookkeeping-${{ github.ref_name }}.apk
           asset_content_type: application/vnd.android.package-archive
