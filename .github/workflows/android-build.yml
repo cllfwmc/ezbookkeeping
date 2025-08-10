@@ -82,48 +82,54 @@ jobs:
       # ---------- 增加 splash screen ----------
       - name: Add Splash Screen
         run: |
-          # 1. 彻底清理旧资源
-          rm -rf android/.gradle ~/.gradle/caches android/app/build
-          find android/app/src -type f \( -name 'splash*' -o -name 'launch_background*' \) -delete || true
+          # 1. 先清掉所有缓存目录
+          rm -rf android/.gradle
+          rm -rf ~/.gradle/caches
+          rm -rf android/app/build
+          rm -rf android/app/src/main/res/drawable-*
+          rm -rf android/app/src/debug/res/drawable-* 2>/dev/null || true
+          rm -rf android/app/src/release/res/drawable-* 2>/dev/null || true
 
-          # 2. 安装 ImageMagick
-          sudo apt-get update -qq && sudo apt-get install -qq -y imagemagick
+          sudo apt-get update && sudo apt-get install -y imagemagick
 
-          # 3. 创建带密度后缀的目录
-          for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
-            mkdir -p android/app/src/main/res/drawable-$d
-          done
-          mkdir -p android/app/src/main/res/drawable android/app/src/main/res/values
+          # 创建 drawable 目录
+          rm -rf android/app/src/main/res/drawable-*
+          mkdir -p android/app/src/main/res/drawable-mdpi
+          mkdir -p android/app/src/main/res/drawable-hdpi
+          mkdir -p android/app/src/main/res/drawable-xhdpi
+          mkdir -p android/app/src/main/res/drawable-xxhdpi
+          mkdir -p android/app/src/main/res/drawable-xxxhdpi
 
-          # 4. 复制不同密度的 PNG，统一命名为 splash_png.png
-          convert resources/splash_720x1280.png  android/app/src/main/res/drawable-mdpi/splash_png.png
-          convert resources/splash_1080x1920.png android/app/src/main/res/drawable-hdpi/splash_png.png
-          convert resources/splash_1080x2400.png android/app/src/main/res/drawable-xhdpi/splash_png.png
-          convert resources/splash_1440x2560.png android/app/src/main/res/drawable-xxhdpi/splash_png.png
-          convert resources/splash_1440x3120.png android/app/src/main/res/drawable-xxxhdpi/splash_png.png
+          # 正确分配不同分辨率到不同目录（避免重复覆盖）
+          convert resources/splash_720x1280.png  android/app/src/main/res/drawable-mdpi/splash.png
+          convert resources/splash_1080x1920.png android/app/src/main/res/drawable-hdpi/splash.png
+          convert resources/splash_1080x2400.png android/app/src/main/res/drawable-xhdpi/splash.png
+          convert resources/splash_1440x2560.png android/app/src/main/res/drawable-xxhdpi/splash.png
+          convert resources/splash_1440x3120.png android/app/src/main/res/drawable-xxxhdpi/splash.png
 
-          # 5. 生成 wrapper：splash_wrapper.xml（供 launch_background.xml 直接引用）
-          cat > android/app/src/main/res/drawable/splash_wrapper.xml <<'EOF'
-          <?xml version="1.0" encoding="utf-8"?>
-          <bitmap xmlns:android="http://schemas.android.com/apk/res/android"
-              android:src="@drawable/splash_png"
-              android:gravity="center" />
-          EOF
-
-          # 6. 生成 launch_background.xml（引用 wrapper，不再用同名 splash）
+          # 生成 launch_background.xml
+          mkdir -p android/app/src/main/res/drawable
           cat > android/app/src/main/res/drawable/launch_background.xml <<'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+              <!-- 背景色 -->
               <item>
                   <shape android:shape="rectangle">
                       <solid android:color="@android:color/white" />
                   </shape>
               </item>
-              <item android:drawable="@drawable/splash_wrapper" android:gravity="center" />
+
+              <!-- 等比缩放的图片 -->
+              <item>
+                  <bitmap
+                      android:gravity="center"
+                      android:tileMode="disabled"
+                      android:src="@drawable/splash" />
+              </item>
           </layer-list>
           EOF
 
-          # 7. 生成/覆盖 styles.xml
+          # 创建 styles.xml
           cat > android/app/src/main/res/values/styles.xml <<'EOF'
           <resources>
               <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
@@ -139,12 +145,11 @@ jobs:
           </resources>
           EOF
 
-          # 8. 修改 AndroidManifest.xml
-          sed -i -E 's/android:theme="@style\/[^"]*"/android:theme="@style\/LaunchTheme"/' android/app/src/main/AndroidManifest.xml
+          # 修改 AndroidManifest.xml 中的 theme
+          sed -i 's/android:theme="@style\/AppTheme\.NoActionBarLaunch"/android:theme="@style\/LaunchTheme"/' android/app/src/main/AndroidManifest.xml
 
-          # 9. 清理并构建
-          cd android
-          ./gradlew clean assembleDebug --no-build-cache
+          # 清理 Gradle 缓存
+          cd android && ./gradlew clean && cd ..
 
       - name: Build Android APK
         run: |
