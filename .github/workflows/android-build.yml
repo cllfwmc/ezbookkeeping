@@ -162,6 +162,48 @@ jobs:
           echo "keyAlias=${{ secrets.KEY_ALIAS }}"            >> key.properties
           echo "storeFile=../resources/upload-keystore.jks"   >> key.properties
 
+      # ---------- 动态为 Capacitor 生成的 android 目录添加签名配置 ----------
+      - name: Inject signing config into build.gradle
+        run: |
+          cd android/app
+          # 如果之前已经 patch 过，先去掉旧片段，避免重复
+          sed -i '/### CI-INJECT-SIGNING-BEGIN ###/,/### CI-INJECT-SIGNING-END ###/d' build.gradle
+
+          # 找到 android {} 块的末尾（第一个顶格的 "}"）
+          awk -v block="$(cat <<"EOF"
+          ### CI-INJECT-SIGNING-BEGIN ###
+              def keystorePropertiesFile = rootProject.file("../key.properties")
+              def keystoreProperties = new Properties()
+              if (keystorePropertiesFile.exists()) {
+                  keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+              }
+          
+              signingConfigs {
+                  release {
+                      storeFile file(keystoreProperties["storeFile"])
+                      storePassword keystoreProperties["storePassword"]
+                      keyAlias keystoreProperties["keyAlias"]
+                      keyPassword keystoreProperties["keyPassword"]
+                  }
+              }
+          ### CI-INJECT-SIGNING-END ###
+          EOF
+          )" '
+                    /^}/ && !done { print block; done=1 } 1' build.gradle > build.gradle.tmp
+                    mv build.gradle.tmp build.gradle
+          
+                    # 再把 release buildType 指向 signingConfigs.release
+                    awk '
+                    /buildTypes.*{/ { inBlock=1 } 
+                    inBlock && /release.*{/ { inRelease=1 } 
+                    inRelease && /signingConfig/ { next }   # 删除旧的 signingConfig
+                    inRelease && /^[[:space:]]*}/ { 
+                        print "            signingConfig signingConfigs.release"
+                        inRelease=0
+                    }
+                    { print }
+                    ' build.gradle > build.gradle.tmp
+                    mv build.gradle.tmp build.gradle
 
       - name: Build Android APK
         run: |
