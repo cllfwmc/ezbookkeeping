@@ -165,18 +165,20 @@ jobs:
       - name: Inject signing config into build.gradle
         run: |
           cd android/app
-
-          # 1. 删除旧片段（如果有）
-          sed -i '/^ *signingConfigs *{/,/^ *}/ { /^ *release/,/^ *}/d }' build.gradle
-          sed -i '/^ *release *{/,/^ *}/ { /^ *signingConfig/,/^ *}/d }' build.gradle
-
-          # 2. 在 android {} 块里插入 signingConfigs
-          sed -i '/^android *{/ a\
+      
+          # 1. 删除旧的 signingConfigs release 块
+          sed -i '/^[[:space:]]*signingConfigs[[:space:]]*{/,/^[[:space:]]*}[[:space:]]*}/ { /^[[:space:]]*release/,/^[[:space:]]*}[[:space:]]*}/d; }' build.gradle
+      
+          # 2. 删除 release buildType 中已有的 signingConfig 行
+          sed -i '/^[[:space:]]*release[[:space:]]*{/,/^[[:space:]]*}[[:space:]]*}/ { /signingConfig[[:space:]]/d; }' build.gradle
+      
+          # 3. 在 android { } 块中插入 signingConfigs（使用 | 作为分隔符避免 / 冲突）
+          sed -i '/^android[[:space:]]*{/{n;N;N;N;N;N;N;N;N;N;N;N;N;N;N;N;N;a\
           def keystorePropertiesFile = rootProject.file("../key.properties")\
           def keystoreProperties = new Properties()\
           if (keystorePropertiesFile.exists()) {\
               keystoreProperties.load(new FileInputStream(keystorePropertiesFile))\
-          }\   
+          }\
           signingConfigs {\
               release {\
                   storeFile file(keystoreProperties["storeFile"])\
@@ -184,11 +186,12 @@ jobs:
                   keyAlias keystoreProperties["keyAlias"]\
                   keyPassword keystoreProperties["keyPassword"]\
               }\
+          }
           }' build.gradle
-
-          # 3. 把 release buildType 指向 signingConfigs.release
-          sed -i '/buildTypes *{/,/^ *}/ { /release *{/,/^ *}/ { /signingConfig/d } }' build.gradle
-          sed -i '/buildTypes *{/,/^ *}/ { /release *{/,/^ *}/ s/\(^ *}\)/            signingConfig signingConfigs.release\n\1/ }' build.gradle
+      
+          # 4. 在 buildTypes 的 release 块中插入 signingConfig
+          sed -i '/buildTypes[[:space:]]*{/,/}/ { /release[[:space:]]*{/,/}/ { /}/i\            signingConfig signingConfigs.release
+          } }' build.gradle
 
       - name: Build Android APK
         run: |
