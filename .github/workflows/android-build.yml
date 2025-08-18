@@ -1,12 +1,26 @@
+# ===========================================
+#  GitHub Actions – Build & Sign Android APK
+# ===========================================
+
 name: Build Android APK
 
 on:
   push:
-    branches: [ apk_dispatch ]
-    tags: [ 'v*' ]
+    branches: [apk_dispatch]
+    tags: ['v*']
   pull_request:
-    branches: [ apk_dispatch ]
+    branches: [apk_dispatch]
 
+env:
+  NODE_VERSION: 22
+  JAVA_DIST:  temurin
+  JAVA_VERSION: 21
+  CAPACITOR_VERSION: 6.2.1
+  PLUGIN_VERSION: 6.0.2
+  # SERVER_PORT: xxxx
+  # 默认服务器 URL，可通过 SECRET 覆盖
+  # SERVER_URL: 'http://xx.xxx.xx.xx:xxxx/'
+  
 jobs:
   build-android:
     runs-on: ubuntu-latest
@@ -17,29 +31,51 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '21'
+          distribution: ${{ env.JAVA_DIST }}
+          java-version: ${{ env.JAVA_VERSION }}
 
-      # ---------- 依赖 & 平台 ----------
+      # ---------- 依赖安装 ----------
       - name: Install core dependencies
         run: npm install
 
+      # ---------- 依赖 & 平台 ----------
       - name: Install Capacitor CLI and plugins
         run: |
-          npm install @capacitor/core@6.2.1 @capacitor/cli@6.2.1
-          npm install @capacitor/android@6.2.1 @capacitor/ios@6.2.1 --save-dev
-          npm install @capacitor/app@6.0.2 @capacitor/keyboard@6.0.2 @capacitor/splash-screen@6.0.2
+          npm install @capacitor/core@${{ env.CAPACITOR_VERSION }} @capacitor/cli@${{ env.CAPACITOR_VERSION }}
+          npm install @capacitor/android@${{ env.CAPACITOR_VERSION }} @capacitor/ios@${{ env.CAPACITOR_VERSION }} --save-dev
+          npm install @capacitor/app@${{ env.PLUGIN_VERSION }} @capacitor/keyboard@${{ env.PLUGIN_VERSION }} @capacitor/splash-screen@${{ env.PLUGIN_VERSION }}
           npx cap init ezbookkeeping com.example.ezbookkeeping --web-dir=dist --npm-client=npm --no-interactive || true
 
+      # ---------- Web构建 ----------
       - name: Build web app
         run: npm run build
 
+      # ---------- 修改 Capacitor 配置 ----------
+      - name: Update Capacitor Config
+        run: |
+          # 如果设置了 SERVER_IP 环境变量，则使用它构建 URL
+          if [ -n "${{ secrets.SERVER_IP }}" ]; then
+            SERVER_URL="http://${{ secrets.SERVER_IP }}:${{ secrets.SERVER_PORT }}/"
+            echo "使用自定义服务器 URL: $SERVER_URL"
+          else
+            SERVER_URL="${{ env.SERVER_URL }}"
+            echo "使用默认服务器 URL: $SERVER_URL"
+          fi
+          
+          # 使用 sed 替换 capacitor.config.ts 中的 URL
+          sed -i "s|url: '.*'|url: '$SERVER_URL'|" capacitor.config.ts
+          
+          # 显示修改后的配置
+          echo "修改后的 capacitor.config.ts:"
+          grep -A 3 "server:" capacitor.config.ts
+
+      # ---------- 添加 Android 平台 ----------
       - name: Add Android platform
         run: npx cap add android || true
 
@@ -109,7 +145,7 @@ jobs:
 
           # 生成 launch_background.xml
           mkdir -p android/app/src/main/res/drawable
-          cat > android/app/src/main/res/drawable/launch_background.xml <<'EOF'
+          cat > android/app/src/main/res/drawable/launch_background.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
               <!-- 背景色 -->
@@ -130,7 +166,7 @@ jobs:
           EOF
 
           # 创建 styles.xml
-          cat > android/app/src/main/res/values/styles.xml <<'EOF'
+          cat > android/app/src/main/res/values/styles.xml << 'EOF'
           <resources>
               <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
                   <item name="colorPrimary">@color/colorPrimary</item>
@@ -156,7 +192,8 @@ jobs:
         run: |
           echo "${{ secrets.KEY_STORE_BASE64 }}" | base64 -d > upload-keystore.jks
           ls -l upload-keystore.jks
-          
+
+      # ---------- 创建 key.properties ----------
       - name: Create key.properties
         working-directory: android
         run: |
@@ -166,6 +203,7 @@ jobs:
           echo "storeFile=$(realpath ../upload-keystore.jks)"   >> key.properties
           cat key.properties
 
+      # ---------- 注入签名配置 ----------
       - name: Inject signing config into build.gradle
         run: |
           cd android/app
@@ -187,26 +225,27 @@ jobs:
           
           # 在 android { 块的开始位置添加签名配置
           sed -i '/android {/a \
-          signingConfigs {\
-              release {\
-                  def keystorePropertiesFile = rootProject.file("key.properties")\
-                  def keystoreProperties = new Properties()\
-                  keystoreProperties.load(new FileInputStream(keystorePropertiesFile))\
-                  storeFile file(keystoreProperties["storeFile"])\
-                  storePassword keystoreProperties["storePassword"]\
-                  keyAlias keystoreProperties["keyAlias"]\
-                  keyPassword keystoreProperties["keyPassword"]\
-              }\
-          }' build.gradle
+            signingConfigs {\
+                release {\
+                    def keystorePropertiesFile = rootProject.file("key.properties")\
+                    def keystoreProperties = new Properties()\
+                    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))\
+                    storeFile file(keystoreProperties["storeFile"])\
+                    storePassword keystoreProperties["storePassword"]\
+                    keyAlias keystoreProperties["keyAlias"]\
+                    keyPassword keystoreProperties["keyPassword"]\
+                }\
+            }' build.gradle
           
           # 在 buildTypes 块中添加 signingConfig
           sed -i '/buildTypes {/,/}/s/release {/release {\
-              signingConfig signingConfigs.release/' build.gradle
+                signingConfig signingConfigs.release/' build.gradle
           
           # 4. 打印修改后的内容以验证
           echo "查看修改后的 build.gradle 文件:"
           grep -n -A 15 "signingConfigs" build.gradle
 
+      # ---------- 构建 APK ----------
       - name: Build Android APK
         run: |
           cd android
@@ -215,7 +254,7 @@ jobs:
           echo "构建前检查 app/build.gradle 文件内容:"
           grep -n -A 5 -B 5 "signingConfigs" app/build.gradle || echo "未找到 signingConfigs 配置"
           
-          # 尝试用 debug 模式构建，以获取更多错误信息
+          # 使用 info 模式构建，以获取更多错误信息
           ./gradlew assembleRelease --no-daemon --info
           
       # ---------- 确认实际输出路径 ----------
