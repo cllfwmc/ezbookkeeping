@@ -153,18 +153,27 @@ jobs:
 
       # ---------- 签名配置 ----------
       - name: Decode Keystore
-        run: echo "${{ secrets.KEY_STORE_BASE64 }}" | base64 -d > resources/upload-keystore.jks
+        run: |
+          echo "${{ secrets.KEY_STORE_BASE64 }}" | base64 -d > upload-keystore.jks
+          ls -l upload-keystore.jks
+          
       - name: Create key.properties
         working-directory: android
         run: |
           echo "storePassword=${{ secrets.KEY_STORE_PASSWORD }}" > key.properties
           echo "keyPassword=${{ secrets.KEY_PASSWORD }}"      >> key.properties
           echo "keyAlias=${{ secrets.KEY_ALIAS }}"            >> key.properties
-          echo "storeFile=../resources/upload-keystore.jks"   >> key.properties
+          echo "storeFile=$(realpath ../upload-keystore.jks)"   >> key.properties
+          cat key.properties
 
       - name: Inject signing config into build.gradle
         run: |
           cd android/app
+          
+          # Debug: 检查 key.properties 文件是否存在
+          echo "检查 key.properties 文件:"
+          ls -l ../key.properties
+          cat ../key.properties
       
           # 1. 删除旧的 signingConfigs release 块
           sed -i '/^[[:space:]]*signingConfigs[[:space:]]*{/,/^[[:space:]]*}[[:space:]]*}/ { /^[[:space:]]*release/,/^[[:space:]]*}[[:space:]]*}/d; }' build.gradle
@@ -174,14 +183,14 @@ jobs:
       
           # 3. 在 android { } 块中插入 signingConfigs（使用 | 作为分隔符避免 / 冲突）
           sed -i '/^android[[:space:]]*{/{n;N;N;N;N;N;N;N;N;N;N;N;N;N;N;N;N;a\
-          def keystorePropertiesFile = rootProject.file("../key.properties")\
+          def keystorePropertiesFile = rootProject.file("key.properties")\
           def keystoreProperties = new Properties()\
           if (keystorePropertiesFile.exists()) {\
               keystoreProperties.load(new FileInputStream(keystorePropertiesFile))\
           }\
           signingConfigs {\
               release {\
-                  storeFile file(keystoreProperties["storeFile"])\
+                  storeFile keystoreProperties["storeFile"] ? file(keystoreProperties["storeFile"]) : null\
                   storePassword keystoreProperties["storePassword"]\
                   keyAlias keystoreProperties["keyAlias"]\
                   keyPassword keystoreProperties["keyPassword"]\
@@ -192,6 +201,10 @@ jobs:
           # 4. 在 buildTypes 的 release 块中插入 signingConfig
           sed -i '/buildTypes[[:space:]]*{/,/}/ { /release[[:space:]]*{/,/}/ { /}/i\            signingConfig signingConfigs.release
           } }' build.gradle
+          
+          # 显示修改后的 build.gradle 文件
+          echo "修改后的 build.gradle 文件内容:"
+          grep -A 15 signingConfigs build.gradle
 
       - name: Build Android APK
         run: |
