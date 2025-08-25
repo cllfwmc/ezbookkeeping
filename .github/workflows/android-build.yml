@@ -6,10 +6,10 @@ name: Build Android APK
 
 on:
   push:
-    branches: [apk_dispatch]
+    branches: [fix/location-unavailable]
     tags: ['v*']
   pull_request:
-    branches: [apk_dispatch]
+    branches: [fix/location-unavailable]
 
 env:
   NODE_VERSION: 22
