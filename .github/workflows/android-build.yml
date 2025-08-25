@@ -87,37 +87,44 @@ jobs:
           <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />' android/app/src/main/AndroidManifest.xml
 
       # -- 启用 WebView 定位功能 --
+      # -- 启用 WebView 定位功能 --
       - name: Enable WebView Geolocation in MainActivity
         run: |
-          MAIN_ACTIVITY_PATH="android/app/src/main/java/com/example/ezbookkeeping/MainActivity.java"
-            
-          # 备份原始文件
-          cp "$MAIN_ACTIVITY_PATH" "$MAIN_ACTIVITY_PATH.bak"
-            
-          # 查找 import 区域并插入 WebChromeClient 的 import
-          sed -i '/import com.getcapacitor.BridgeActivity;/a\
-          import android.webkit.WebChromeClient;\
-          import android.webkit.GeolocationPermissions;\
-          import android.os.Bundle;' "$MAIN_ACTIVITY_PATH"
-            
-          # 在类体中添加 onCreate 方法（如果不存在）并插入 WebView 设置
-          if ! grep -q "onGeolocationPermissionsShowPrompt" "$MAIN_ACTIVITY_PATH"; then
-            sed -i '/public class MainActivity extends BridgeActivity {/a\
-          \
-          @Override\
-          public void onCreate(Bundle savedInstanceState) {\
-            super.onCreate(savedInstanceState);\
-            this.bridge.getWebView().setWebChromeClient(new WebChromeClient() {\
-              @Override\
-              public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {\
-                callback.invoke(origin, true, false);\
-              }\
-            });\
-          }' "$MAIN_ACTIVITY_PATH"
-            fi
+          set -e
 
-            echo "MainActivity.java 已打补丁，支持定位："
-            cat "$MAIN_ACTIVITY_PATH"
+          # 1. 找到 MainActivity.java 的真实路径
+          MAIN_ACTIVITY_PATH=$(find android/app/src/main/java -name MainActivity.java)
+          echo "MainActivity.java 实际路径为：$MAIN_ACTIVITY_PATH"
+
+          # 2. 备份
+          cp "$MAIN_ACTIVITY_PATH" "$MAIN_ACTIVITY_PATH.bak"
+
+          # 3. 插入 import
+          if ! grep -q "android.webkit.WebChromeClient" "$MAIN_ACTIVITY_PATH"; then
+            sed -i '/import com.getcapacitor.BridgeActivity;/a\
+            import android.webkit.WebChromeClient;\
+            import android.webkit.GeolocationPermissions;\
+            import android.os.Bundle;' "$MAIN_ACTIVITY_PATH"
+                      fi
+                  
+                      # 4. 插入 onCreate
+                      if ! grep -q "onGeolocationPermissionsShowPrompt" "$MAIN_ACTIVITY_PATH"; then
+                        sed -i '/public class MainActivity extends BridgeActivity {/a\
+            \
+              @Override\
+              public void onCreate(Bundle savedInstanceState) {\
+                super.onCreate(savedInstanceState);\
+                this.bridge.getWebView().setWebChromeClient(new WebChromeClient() {\
+                  @Override\
+                  public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {\
+                    callback.invoke(origin, true, false);\
+                  }\
+                });\
+              }' "$MAIN_ACTIVITY_PATH"
+                      fi
+                  
+                      echo "MainActivity.java 已打补丁，支持定位："
+                      cat "$MAIN_ACTIVITY_PATH"
 
       # ---------- 替换图标 ----------
       - name: Replace Android Icons
